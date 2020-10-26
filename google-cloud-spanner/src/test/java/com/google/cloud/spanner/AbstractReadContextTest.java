@@ -89,7 +89,8 @@ public class AbstractReadContextTest {
   public void executeSqlRequestBuilderWithoutQueryOptions() {
     ExecuteSqlRequest request =
         context
-            .getExecuteSqlRequestBuilder(Statement.of("SELECT FOO FROM BAR"), QueryMode.NORMAL)
+            .getExecuteSqlRequestBuilder(
+                Statement.of("SELECT FOO FROM BAR"), QueryMode.NORMAL, Options.fromQueryOptions())
             .build();
     assertThat(request.getSql()).isEqualTo("SELECT FOO FROM BAR");
     assertThat(request.getQueryOptions()).isEqualTo(defaultQueryOptions);
@@ -103,9 +104,39 @@ public class AbstractReadContextTest {
                 Statement.newBuilder("SELECT FOO FROM BAR")
                     .withQueryOptions(QueryOptions.newBuilder().setOptimizerVersion("2.0").build())
                     .build(),
-                QueryMode.NORMAL)
+                QueryMode.NORMAL,
+                Options.fromQueryOptions())
             .build();
     assertThat(request.getSql()).isEqualTo("SELECT FOO FROM BAR");
     assertThat(request.getQueryOptions().getOptimizerVersion()).isEqualTo("2.0");
+  }
+
+  @Test
+  public void executeSqlRequestBuilderWithRequestOptions() {
+    ExecuteSqlRequest request =
+        context
+            .getExecuteSqlRequestBuilder(
+                Statement.newBuilder("SELECT FOO FROM BAR").build(),
+                QueryMode.NORMAL,
+                Options.fromUpdateOptions(Options.tag("tag-1")))
+            .build();
+    assertThat(request.getSql()).isEqualTo("SELECT FOO FROM BAR");
+    assertThat(request.getRequestOptions().getRequestTag()).isEqualTo("tag-1");
+    assertThat(request.getRequestOptions().getTransactionTag()).isEmpty();
+  }
+
+  @Test
+  public void executeSqlRequestBuilderWithRequestOptionsWithTxnTag() {
+    ExecuteSqlRequest request =
+        context
+            .getExecuteSqlRequestBuilderWithTxnTag(
+                Statement.newBuilder("SELECT FOO FROM BAR").build(),
+                QueryMode.NORMAL,
+                Options.fromUpdateOptions(Options.tag("tag-1")),
+                "tag-2")
+            .build();
+    assertThat(request.getSql()).isEqualTo("SELECT FOO FROM BAR");
+    assertThat(request.getRequestOptions().getRequestTag()).isEqualTo("tag-1");
+    assertThat(request.getRequestOptions().getTransactionTag()).isEqualTo("tag-2");
   }
 }

@@ -47,6 +47,7 @@ import com.google.spanner.v1.ExecuteSqlRequest.QueryMode;
 import com.google.spanner.v1.ExecuteSqlRequest.QueryOptions;
 import com.google.spanner.v1.PartialResultSet;
 import com.google.spanner.v1.ReadRequest;
+import com.google.spanner.v1.RequestOptions;
 import com.google.spanner.v1.Transaction;
 import com.google.spanner.v1.TransactionOptions;
 import com.google.spanner.v1.TransactionSelector;
@@ -535,8 +536,8 @@ abstract class AbstractReadContext
    *   <li>Specific {@link QueryOptions} passed in for this query.
    *   <li>Any value specified in a valid environment variable when the {@link SpannerOptions}
    *       instance was created.
-   *   <li>The default {@link SpannerOptions#getDefaultQueryOptions()} specified for the database
-   *       where the query is executed.
+   *   <li>The default {@link SpannerOptions#getDefaultQueryOptions(DatabaseId)} specified for the
+   *       database where the query is executed.
    * </ol>
    */
   @VisibleForTesting
@@ -554,7 +555,13 @@ abstract class AbstractReadContext
     return builder.build();
   }
 
-  ExecuteSqlRequest.Builder getExecuteSqlRequestBuilder(Statement statement, QueryMode queryMode) {
+  ExecuteSqlRequest.Builder getExecuteSqlRequestBuilder(
+      Statement statement, QueryMode queryMode, Options options) {
+    return getExecuteSqlRequestBuilderWithTxnTag(statement, queryMode, options, null /*txnTag*/);
+  }
+
+  ExecuteSqlRequest.Builder getExecuteSqlRequestBuilderWithTxnTag(
+      Statement statement, QueryMode queryMode, Options options, String txnTag) {
     ExecuteSqlRequest.Builder builder =
         ExecuteSqlRequest.newBuilder()
             .setSql(statement.getSql())
@@ -574,10 +581,17 @@ abstract class AbstractReadContext
     }
     builder.setSeqno(getSeqNo());
     builder.setQueryOptions(buildQueryOptions(statement.getQueryOptions()));
+    if (txnTag != null || options.hasTag()) {
+      RequestOptions.Builder requestOptionsBuilder = RequestOptions.newBuilder();
+      if (txnTag != null) requestOptionsBuilder.setTransactionTag(txnTag);
+      if (options.hasTag()) requestOptionsBuilder.setRequestTag(options.tag());
+      builder.setRequestOptions(requestOptionsBuilder.build());
+    }
     return builder;
   }
 
-  ExecuteBatchDmlRequest.Builder getExecuteBatchDmlRequestBuilder(Iterable<Statement> statements) {
+  ExecuteBatchDmlRequest.Builder getExecuteBatchDmlRequestBuilder(
+      Iterable<Statement> statements, Options options, String txnTag) {
     ExecuteBatchDmlRequest.Builder builder =
         ExecuteBatchDmlRequest.newBuilder().setSession(session.getName());
     int idx = 0;
@@ -603,6 +617,12 @@ abstract class AbstractReadContext
       builder.setTransaction(selector);
     }
     builder.setSeqno(getSeqNo());
+    if (txnTag != null || options.hasTag()) {
+      RequestOptions.Builder requestOptionsBuilder = RequestOptions.newBuilder();
+      if (txnTag != null) requestOptionsBuilder.setTransactionTag(txnTag);
+      if (options.hasTag()) requestOptionsBuilder.setRequestTag(options.tag());
+      builder.setRequestOptions(requestOptionsBuilder.build());
+    }
     return builder;
   }
 
@@ -612,7 +632,8 @@ abstract class AbstractReadContext
       Options options,
       ByteString partitionToken) {
     beforeReadOrQuery();
-    final ExecuteSqlRequest.Builder request = getExecuteSqlRequestBuilder(statement, queryMode);
+    final ExecuteSqlRequest.Builder request =
+        getExecuteSqlRequestBuilder(statement, queryMode, options);
     if (partitionToken != null) {
       request.setPartitionToken(partitionToken);
     }
@@ -729,6 +750,10 @@ abstract class AbstractReadContext
     }
     if (partitionToken != null) {
       builder.setPartitionToken(partitionToken);
+    }
+    if (readOptions.hasTag()) {
+      builder.setRequestOptions(
+          RequestOptions.newBuilder().setRequestTag(readOptions.tag()).build());
     }
     final int prefetchChunks =
         readOptions.hasPrefetchChunks() ? readOptions.prefetchChunks() : defaultPrefetchChunks;

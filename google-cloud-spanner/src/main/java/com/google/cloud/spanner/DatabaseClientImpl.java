@@ -18,6 +18,7 @@ package com.google.cloud.spanner;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.Options.TransactionOption;
+import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.SessionPool.PooledSessionFuture;
 import com.google.cloud.spanner.SpannerImpl.ClosedException;
 import com.google.common.annotations.VisibleForTesting;
@@ -72,10 +73,24 @@ class DatabaseClientImpl implements DatabaseClient {
   }
 
   @Override
-  public CommitResponse writeWithOptions(Iterable<Mutation> mutations, TransactionOption... options)
+  public CommitResponse writeWithOptions(
+      final Iterable<Mutation> mutations, final TransactionOption... options)
       throws SpannerException {
-    final Timestamp commitTimestamp = write(mutations);
-    return new CommitResponse(commitTimestamp);
+    Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
+    try (Scope s = tracer.withSpan(span)) {
+      return runWithSessionRetry(
+          new Function<Session, CommitResponse>() {
+            @Override
+            public CommitResponse apply(Session session) {
+              return session.writeWithOptions(mutations, options);
+            }
+          });
+    } catch (RuntimeException e) {
+      TraceUtil.setWithFailure(span, e);
+      throw e;
+    } finally {
+      span.end(TraceUtil.END_SPAN_OPTIONS);
+    }
   }
 
   @Override
@@ -99,9 +114,23 @@ class DatabaseClientImpl implements DatabaseClient {
 
   @Override
   public CommitResponse writeAtLeastOnceWithOptions(
-      Iterable<Mutation> mutations, TransactionOption... options) throws SpannerException {
-    final Timestamp commitTimestamp = writeAtLeastOnce(mutations);
-    return new CommitResponse(commitTimestamp);
+      final Iterable<Mutation> mutations, final TransactionOption... options)
+      throws SpannerException {
+    Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
+    try (Scope s = tracer.withSpan(span)) {
+      return runWithSessionRetry(
+          new Function<Session, CommitResponse>() {
+            @Override
+            public CommitResponse apply(Session session) {
+              return session.writeAtLeastOnceWithOptions(mutations, options);
+            }
+          });
+    } catch (RuntimeException e) {
+      TraceUtil.setWithFailure(span, e);
+      throw e;
+    } finally {
+      span.end(TraceUtil.END_SPAN_OPTIONS);
+    }
   }
 
   @Override
@@ -217,14 +246,14 @@ class DatabaseClientImpl implements DatabaseClient {
   }
 
   @Override
-  public long executePartitionedUpdate(final Statement stmt) {
+  public long executePartitionedUpdate(final Statement stmt, final UpdateOption... options) {
     Span span = tracer.spanBuilder(PARTITION_DML_TRANSACTION).startSpan();
     try (Scope s = tracer.withSpan(span)) {
       return runWithSessionRetry(
           new Function<Session, Long>() {
             @Override
             public Long apply(Session session) {
-              return session.executePartitionedUpdate(stmt);
+              return session.executePartitionedUpdate(stmt, options);
             }
           });
     } catch (RuntimeException e) {

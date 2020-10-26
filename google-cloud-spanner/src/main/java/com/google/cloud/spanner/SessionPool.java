@@ -48,6 +48,7 @@ import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
 import com.google.cloud.spanner.Options.QueryOption;
 import com.google.cloud.spanner.Options.ReadOption;
 import com.google.cloud.spanner.Options.TransactionOption;
+import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.SessionClient.SessionConsumer;
 import com.google.cloud.spanner.SpannerException.ResourceNotFoundException;
 import com.google.cloud.spanner.SpannerImpl.ClosedException;
@@ -651,39 +652,45 @@ final class SessionPool {
       }
 
       @Override
-      public long executeUpdate(Statement statement) {
+      public long executeUpdate(Statement statement, UpdateOption... options) {
         try {
-          return delegate.executeUpdate(statement);
+          return delegate.executeUpdate(statement, options);
         } catch (SessionNotFoundException e) {
           throw handleSessionNotFound(e);
         }
       }
 
       @Override
-      public ApiFuture<Long> executeUpdateAsync(Statement statement) {
+      public ApiFuture<Long> executeUpdateAsync(Statement statement, UpdateOption... options) {
         try {
-          return delegate.executeUpdateAsync(statement);
+          return delegate.executeUpdateAsync(statement, options);
         } catch (SessionNotFoundException e) {
           throw handleSessionNotFound(e);
         }
       }
 
       @Override
-      public long[] batchUpdate(Iterable<Statement> statements) {
+      public long[] batchUpdate(Iterable<Statement> statements, UpdateOption... options) {
         try {
-          return delegate.batchUpdate(statements);
+          return delegate.batchUpdate(statements, options);
         } catch (SessionNotFoundException e) {
           throw handleSessionNotFound(e);
         }
       }
 
       @Override
-      public ApiFuture<long[]> batchUpdateAsync(Iterable<Statement> statements) {
+      public ApiFuture<long[]> batchUpdateAsync(
+          Iterable<Statement> statements, UpdateOption... options) {
         try {
-          return delegate.batchUpdateAsync(statements);
+          return delegate.batchUpdateAsync(statements, options);
         } catch (SessionNotFoundException e) {
           throw handleSessionNotFound(e);
         }
+      }
+
+      @Override
+      public void withTransactionTag(String tag) {
+        delegate.withTransactionTag(tag);
       }
 
       @Override
@@ -1004,8 +1011,11 @@ final class SessionPool {
     @Override
     public CommitResponse writeWithOptions(
         Iterable<Mutation> mutations, TransactionOption... options) throws SpannerException {
-      final Timestamp commitTimestamp = write(mutations);
-      return new CommitResponse(commitTimestamp);
+      try {
+        return get().writeWithOptions(mutations, options);
+      } finally {
+        close();
+      }
     }
 
     @Override
@@ -1020,8 +1030,11 @@ final class SessionPool {
     @Override
     public CommitResponse writeAtLeastOnceWithOptions(
         Iterable<Mutation> mutations, TransactionOption... options) throws SpannerException {
-      final Timestamp commitTimestamp = writeAtLeastOnce(mutations);
-      return new CommitResponse(commitTimestamp);
+      try {
+        return get().writeAtLeastOnceWithOptions(mutations, options);
+      } finally {
+        close();
+      }
     }
 
     @Override
@@ -1149,9 +1162,9 @@ final class SessionPool {
     }
 
     @Override
-    public long executePartitionedUpdate(Statement stmt) {
+    public long executePartitionedUpdate(Statement stmt, UpdateOption... options) {
       try {
-        return get().executePartitionedUpdate(stmt);
+        return get().executePartitionedUpdate(stmt, options);
       } finally {
         close();
       }
@@ -1268,8 +1281,12 @@ final class SessionPool {
     @Override
     public CommitResponse writeWithOptions(
         Iterable<Mutation> mutations, TransactionOption... options) throws SpannerException {
-      final Timestamp commitTimestamp = write(mutations);
-      return new CommitResponse(commitTimestamp);
+      try {
+        markUsed();
+        return delegate.writeWithOptions(mutations, options);
+      } catch (SpannerException e) {
+        throw lastException = e;
+      }
     }
 
     @Override
@@ -1285,15 +1302,20 @@ final class SessionPool {
     @Override
     public CommitResponse writeAtLeastOnceWithOptions(
         Iterable<Mutation> mutations, TransactionOption... options) throws SpannerException {
-      final Timestamp commitTimestamp = writeAtLeastOnce(mutations);
-      return new CommitResponse(commitTimestamp);
+      try {
+        markUsed();
+        return delegate.writeAtLeastOnceWithOptions(mutations, options);
+      } catch (SpannerException e) {
+        throw lastException = e;
+      }
     }
 
     @Override
-    public long executePartitionedUpdate(Statement stmt) throws SpannerException {
+    public long executePartitionedUpdate(Statement stmt, UpdateOption... options)
+        throws SpannerException {
       try {
         markUsed();
-        return delegate.executePartitionedUpdate(stmt);
+        return delegate.executePartitionedUpdate(stmt, options);
       } catch (SpannerException e) {
         throw lastException = e;
       }

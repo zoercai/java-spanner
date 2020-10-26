@@ -27,6 +27,10 @@ public final class Options implements Serializable {
   /** Marker interface to mark options applicable to both Read and Query operations */
   public interface ReadAndQueryOption extends ReadOption, QueryOption {}
 
+  /** Marker interface to mark options applicable to Read, Query, Update and Write operations */
+  public interface ReadQueryUpdateTransactionOption
+      extends ReadOption, QueryOption, UpdateOption, TransactionOption {}
+
   /** Marker interface to mark options applicable to read operation */
   public interface ReadOption {}
 
@@ -35,6 +39,9 @@ public final class Options implements Serializable {
 
   /** Marker interface to mark options applicable to write operations */
   public interface TransactionOption {}
+
+  /** Marker interface to mark options applicable to update operation. */
+  public interface UpdateOption {}
 
   /** Marker interface to mark options applicable to list operations in admin API. */
   public interface ListOption {}
@@ -65,6 +72,14 @@ public final class Options implements Serializable {
   public static ReadAndQueryOption bufferRows(int bufferRows) {
     Preconditions.checkArgument(bufferRows > 0, "bufferRows should be greater than 0");
     return new BufferRowsOption(bufferRows);
+  }
+
+  /**
+   * Specifying this will cause the reads, queries, updates and writes operations statistics
+   * collection grouped by tag.
+   */
+  public static ReadQueryUpdateTransactionOption tag(String name) {
+    return new TagOption(name);
   }
 
   /**
@@ -136,12 +151,26 @@ public final class Options implements Serializable {
     }
   }
 
+  static final class TagOption extends InternalOption implements ReadQueryUpdateTransactionOption {
+    private final String tag;
+
+    TagOption(String tag) {
+      this.tag = tag;
+    }
+
+    @Override
+    void appendToOptions(Options options) {
+      options.tag = tag;
+    }
+  }
+
   private Long limit;
   private Integer prefetchChunks;
   private Integer bufferRows;
   private Integer pageSize;
   private String pageToken;
   private String filter;
+  private String tag;
 
   // Construction is via factory methods below.
   private Options() {}
@@ -194,6 +223,14 @@ public final class Options implements Serializable {
     return filter;
   }
 
+  boolean hasTag() {
+    return tag != null;
+  }
+
+  String tag() {
+    return tag;
+  }
+
   @Override
   public String toString() {
     StringBuilder b = new StringBuilder();
@@ -211,6 +248,9 @@ public final class Options implements Serializable {
     }
     if (filter != null) {
       b.append("filter: ").append(filter).append(' ');
+    }
+    if (tag != null) {
+      b.append("tag: ").append(tag).append(' ');
     }
     return b.toString();
   }
@@ -240,7 +280,8 @@ public final class Options implements Serializable {
         && (!hasPageSize() && !that.hasPageSize()
             || hasPageSize() && that.hasPageSize() && Objects.equals(pageSize(), that.pageSize()))
         && Objects.equals(pageToken(), that.pageToken())
-        && Objects.equals(filter(), that.filter());
+        && Objects.equals(filter(), that.filter())
+        && Objects.equals(tag(), that.tag());
   }
 
   @Override
@@ -264,6 +305,9 @@ public final class Options implements Serializable {
     if (filter != null) {
       result = 31 * result + filter.hashCode();
     }
+    if (tag != null) {
+      result = 31 * result + tag.hashCode();
+    }
     return result;
   }
 
@@ -278,13 +322,13 @@ public final class Options implements Serializable {
   }
 
   static Options fromQueryOptions(QueryOption... options) {
-    Options readOptions = new Options();
+    Options queryOptions = new Options();
     for (QueryOption option : options) {
       if (option instanceof InternalOption) {
-        ((InternalOption) option).appendToOptions(readOptions);
+        ((InternalOption) option).appendToOptions(queryOptions);
       }
     }
-    return readOptions;
+    return queryOptions;
   }
 
   static Options fromListOptions(ListOption... options) {
@@ -295,6 +339,26 @@ public final class Options implements Serializable {
       }
     }
     return listOptions;
+  }
+
+  static Options fromUpdateOptions(UpdateOption... options) {
+    Options updateOptions = new Options();
+    for (UpdateOption option : options) {
+      if (option instanceof InternalOption) {
+        ((InternalOption) option).appendToOptions(updateOptions);
+      }
+    }
+    return updateOptions;
+  }
+
+  static Options fromTransactionOptions(TransactionOption... options) {
+    Options transactionOptions = new Options();
+    for (TransactionOption option : options) {
+      if (option instanceof InternalOption) {
+        ((InternalOption) option).appendToOptions(transactionOptions);
+      }
+    }
+    return transactionOptions;
   }
 
   private abstract static class InternalOption {

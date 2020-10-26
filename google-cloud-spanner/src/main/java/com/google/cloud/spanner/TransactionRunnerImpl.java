@@ -28,6 +28,7 @@ import com.google.api.core.SettableApiFuture;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.Options.QueryOption;
 import com.google.cloud.spanner.Options.ReadOption;
+import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.SessionImpl.SessionTransaction;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
 import com.google.common.annotations.VisibleForTesting;
@@ -42,6 +43,7 @@ import com.google.spanner.v1.ExecuteBatchDmlRequest;
 import com.google.spanner.v1.ExecuteBatchDmlResponse;
 import com.google.spanner.v1.ExecuteSqlRequest;
 import com.google.spanner.v1.ExecuteSqlRequest.QueryMode;
+import com.google.spanner.v1.RequestOptions;
 import com.google.spanner.v1.ResultSet;
 import com.google.spanner.v1.RollbackRequest;
 import com.google.spanner.v1.Transaction;
@@ -141,11 +143,14 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     @GuardedBy("lock")
     private volatile int runningAsyncOperations;
 
-    @GuardedBy("lock")
+    @GuardedBy("lock")batchUpdate
     private List<Mutation> mutations = new ArrayList<>();
 
     @GuardedBy("lock")
     private boolean aborted;
+
+    @GuardedBy("lock")
+    private String txnTag;
 
     /** Default to -1 to indicate not available. */
     @GuardedBy("lock")
@@ -311,6 +316,10 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
           } else {
             requestBuilder.setTransactionId(
                 transactionId == null ? transactionIdFuture.get() : transactionId);
+          }
+          if (txnTag != null) {
+            requestBuilder.setRequestOptions(
+                RequestOptions.newBuilder().setTransactionTag(txnTag).build());
           }
           final CommitRequest commitRequest = requestBuilder.build();
           span.addAnnotation("Starting Commit");
@@ -512,10 +521,11 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     }
 
     @Override
-    public long executeUpdate(Statement statement) {
+    public long executeUpdate(Statement statement, UpdateOption... options) {
       beforeReadOrQuery();
       final ExecuteSqlRequest.Builder builder =
-          getExecuteSqlRequestBuilder(statement, QueryMode.NORMAL);
+          getExecuteSqlRequestBuilderWithTxnTag(
+              statement, QueryMode.NORMAL, Options.fromUpdateOptions(options), txnTag);
       try {
         com.google.spanner.v1.ResultSet resultSet =
             rpc.executeQuery(builder.build(), session.getOptions());
@@ -535,10 +545,11 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     }
 
     @Override
-    public ApiFuture<Long> executeUpdateAsync(Statement statement) {
+    public ApiFuture<Long> executeUpdateAsync(Statement statement, UpdateOption... options) {
       beforeReadOrQuery();
       final ExecuteSqlRequest.Builder builder =
-          getExecuteSqlRequestBuilder(statement, QueryMode.NORMAL);
+          getExecuteSqlRequestBuilderWithTxnTag(
+              statement, QueryMode.NORMAL, Options.fromUpdateOptions(options), txnTag);
       final ApiFuture<com.google.spanner.v1.ResultSet> resultSet;
       try {
         // Register the update as an async operation that must finish before the transaction may
@@ -598,9 +609,10 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     }
 
     @Override
-    public long[] batchUpdate(Iterable<Statement> statements) {
+    public long[] batchUpdate(Iterable<Statement> statements, UpdateOption... options) {
       beforeReadOrQuery();
-      final ExecuteBatchDmlRequest.Builder builder = getExecuteBatchDmlRequestBuilder(statements);
+      final ExecuteBatchDmlRequest.Builder builder =
+          getExecuteBatchDmlRequestBuilder(statements, Options.fromUpdateOptions(options), txnTag);
       try {
         com.google.spanner.v1.ExecuteBatchDmlResponse response =
             rpc.executeBatchDml(builder.build(), session.getOptions());
@@ -631,9 +643,11 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     }
 
     @Override
-    public ApiFuture<long[]> batchUpdateAsync(Iterable<Statement> statements) {
+    public ApiFuture<long[]> batchUpdateAsync(
+        Iterable<Statement> statements, UpdateOption... options) {
       beforeReadOrQuery();
-      final ExecuteBatchDmlRequest.Builder builder = getExecuteBatchDmlRequestBuilder(statements);
+      final ExecuteBatchDmlRequest.Builder builder =
+          getExecuteBatchDmlRequestBuilder(statements, Options.fromUpdateOptions(options), txnTag);
       ApiFuture<com.google.spanner.v1.ExecuteBatchDmlResponse> response;
       try {
         // Register the update as an async operation that must finish before the transaction may
@@ -696,6 +710,13 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
           },
           MoreExecutors.directExecutor());
       return updateCounts;
+    }
+
+    @Override
+    public void withTransactionTag(String tag) {
+      synchronized (lock) {
+        this.txnTag = tag;
+      }
     }
 
     private ListenableAsyncResultSet wrap(ListenableAsyncResultSet delegate) {
