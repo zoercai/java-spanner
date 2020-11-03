@@ -125,26 +125,29 @@ class SessionImpl implements Session {
 
   @Override
   public Timestamp write(Iterable<Mutation> mutations) throws SpannerException {
-    TransactionRunner runner = readWriteTransaction();
-    final Collection<Mutation> finalMutations =
-        mutations instanceof java.util.Collection<?>
-            ? (Collection<Mutation>) mutations
-            : Lists.newArrayList(mutations);
-    runner.run(
-        new TransactionRunner.TransactionCallable<Void>() {
-          @Override
-          public Void run(TransactionContext ctx) {
-            ctx.buffer(finalMutations);
-            return null;
-          }
-        });
-    return runner.getCommitTimestamp();
+    final CommitResponse commitResponse = writeWithOptions(mutations);
+    return commitResponse.getCommitTimestamp();
   }
 
   @Override
   public CommitResponse writeWithOptions(Iterable<Mutation> mutations, TransactionOption... options)
       throws SpannerException {
-    final Timestamp commitTimestamp = write(mutations);
+    TransactionRunner runner = readWriteTransaction();
+    final Collection<Mutation> finalMutations =
+        mutations instanceof java.util.Collection<?>
+            ? (Collection<Mutation>) mutations
+            : Lists.newArrayList(mutations);
+    final Options opt = Options.fromTransactionOptions(options);
+    runner.run(
+        new TransactionRunner.TransactionCallable<Void>() {
+          @Override
+          public Void run(TransactionContext ctx) {
+            if (opt.hasTag()) ctx.withTransactionTag(opt.tag());
+            ctx.buffer(finalMutations);
+            return null;
+          }
+        });
+    final Timestamp commitTimestamp = runner.getCommitTimestamp();
     return new CommitResponse(commitTimestamp);
   }
 

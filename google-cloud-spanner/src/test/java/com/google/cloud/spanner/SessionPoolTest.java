@@ -676,7 +676,7 @@ public class SessionPoolTest extends BaseSessionPoolTest {
     clock.currentTimeMillis +=
         clock.currentTimeMillis + (options.getKeepAliveIntervalMinutes() + 5) * 60 * 1000;
     session1 = pool.getSession();
-    session1.writeAtLeastOnce(new ArrayList<Mutation>());
+    session1.writeAtLeastOnceWithOptions(new ArrayList<Mutation>());
     session1.close();
     runMaintainanceLoop(clock, pool, pool.poolMaintainer.numKeepAliveCycles);
     // The session pool only keeps MinSessions + MaxIdleSessions alive.
@@ -1041,10 +1041,11 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         SpannerExceptionFactoryTest.newSessionNotFoundException(sessionName);
     List<Mutation> mutations = Arrays.asList(Mutation.newInsertBuilder("FOO").build());
     final SessionImpl closedSession = mockSession();
-    when(closedSession.write(mutations)).thenThrow(sessionNotFound);
+    when(closedSession.writeWithOptions(mutations)).thenThrow(sessionNotFound);
 
     final SessionImpl openSession = mockSession();
-    when(openSession.write(mutations)).thenReturn(Timestamp.now());
+    when(openSession.writeWithOptions(mutations))
+        .thenReturn(new com.google.cloud.spanner.CommitResponse(Timestamp.now()));
     doAnswer(
             new Answer<Void>() {
               @Override
@@ -1093,10 +1094,11 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         SpannerExceptionFactoryTest.newSessionNotFoundException(sessionName);
     List<Mutation> mutations = Arrays.asList(Mutation.newInsertBuilder("FOO").build());
     final SessionImpl closedSession = mockSession();
-    when(closedSession.writeAtLeastOnce(mutations)).thenThrow(sessionNotFound);
+    when(closedSession.writeAtLeastOnceWithOptions(mutations)).thenThrow(sessionNotFound);
 
     final SessionImpl openSession = mockSession();
-    when(openSession.writeAtLeastOnce(mutations)).thenReturn(Timestamp.now());
+    when(openSession.writeAtLeastOnceWithOptions(mutations))
+        .thenReturn(new com.google.cloud.spanner.CommitResponse(Timestamp.now()));
     doAnswer(
             new Answer<Void>() {
               @Override

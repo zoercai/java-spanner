@@ -55,21 +55,8 @@ class DatabaseClientImpl implements DatabaseClient {
 
   @Override
   public Timestamp write(final Iterable<Mutation> mutations) throws SpannerException {
-    Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
-    try (Scope s = tracer.withSpan(span)) {
-      return runWithSessionRetry(
-          new Function<Session, Timestamp>() {
-            @Override
-            public Timestamp apply(Session session) {
-              return session.write(mutations);
-            }
-          });
-    } catch (RuntimeException e) {
-      TraceUtil.setWithFailure(span, e);
-      throw e;
-    } finally {
-      span.end(TraceUtil.END_SPAN_OPTIONS);
-    }
+    final CommitResponse commitResponse = writeWithOptions(mutations);
+    return commitResponse.getCommitTimestamp();
   }
 
   @Override
@@ -95,21 +82,8 @@ class DatabaseClientImpl implements DatabaseClient {
 
   @Override
   public Timestamp writeAtLeastOnce(final Iterable<Mutation> mutations) throws SpannerException {
-    Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
-    try (Scope s = tracer.withSpan(span)) {
-      return runWithSessionRetry(
-          new Function<Session, Timestamp>() {
-            @Override
-            public Timestamp apply(Session session) {
-              return session.writeAtLeastOnce(mutations);
-            }
-          });
-    } catch (RuntimeException e) {
-      TraceUtil.setWithFailure(span, e);
-      throw e;
-    } finally {
-      span.end(TraceUtil.END_SPAN_OPTIONS);
-    }
+    final CommitResponse commitResponse = writeAtLeastOnceWithOptions(mutations);
+    return commitResponse.getCommitTimestamp();
   }
 
   @Override

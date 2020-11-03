@@ -1001,11 +1001,8 @@ final class SessionPool {
 
     @Override
     public Timestamp write(Iterable<Mutation> mutations) throws SpannerException {
-      try {
-        return get().write(mutations);
-      } finally {
-        close();
-      }
+      final CommitResponse commitResponse = writeWithOptions(mutations);
+      return commitResponse.getCommitTimestamp();
     }
 
     @Override
@@ -1020,11 +1017,8 @@ final class SessionPool {
 
     @Override
     public Timestamp writeAtLeastOnce(Iterable<Mutation> mutations) throws SpannerException {
-      try {
-        return get().writeAtLeastOnce(mutations);
-      } finally {
-        close();
-      }
+      final CommitResponse commitResponse = writeAtLeastOnceWithOptions(mutations);
+      return commitResponse.getCommitTimestamp();
     }
 
     @Override
