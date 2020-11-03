@@ -143,7 +143,7 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
     @GuardedBy("lock")
     private volatile int runningAsyncOperations;
 
-    @GuardedBy("lock")batchUpdate
+    @GuardedBy("lock")
     private List<Mutation> mutations = new ArrayList<>();
 
     @GuardedBy("lock")

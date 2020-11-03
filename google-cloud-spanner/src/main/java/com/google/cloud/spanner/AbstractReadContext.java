@@ -555,6 +555,13 @@ abstract class AbstractReadContext
     return builder.build();
   }
 
+  RequestOptions buildRequestOptions(Options options, String txnTag) {
+    RequestOptions.Builder builder = RequestOptions.newBuilder();
+    if (options.hasTag()) builder.setRequestTag(options.tag());
+    if (txnTag != null) builder.setTransactionTag(txnTag);
+    return builder.build();
+  }
+
   ExecuteSqlRequest.Builder getExecuteSqlRequestBuilder(
       Statement statement, QueryMode queryMode, Options options) {
     return getExecuteSqlRequestBuilderWithTxnTag(statement, queryMode, options, null /*txnTag*/);
@@ -581,12 +588,7 @@ abstract class AbstractReadContext
     }
     builder.setSeqno(getSeqNo());
     builder.setQueryOptions(buildQueryOptions(statement.getQueryOptions()));
-    if (txnTag != null || options.hasTag()) {
-      RequestOptions.Builder requestOptionsBuilder = RequestOptions.newBuilder();
-      if (txnTag != null) requestOptionsBuilder.setTransactionTag(txnTag);
-      if (options.hasTag()) requestOptionsBuilder.setRequestTag(options.tag());
-      builder.setRequestOptions(requestOptionsBuilder.build());
-    }
+    builder.setRequestOptions(buildRequestOptions(options, txnTag));
     return builder;
   }
 
@@ -617,12 +619,7 @@ abstract class AbstractReadContext
       builder.setTransaction(selector);
     }
     builder.setSeqno(getSeqNo());
-    if (txnTag != null || options.hasTag()) {
-      RequestOptions.Builder requestOptionsBuilder = RequestOptions.newBuilder();
-      if (txnTag != null) requestOptionsBuilder.setTransactionTag(txnTag);
-      if (options.hasTag()) requestOptionsBuilder.setRequestTag(options.tag());
-      builder.setRequestOptions(requestOptionsBuilder.build());
-    }
+    builder.setRequestOptions(buildRequestOptions(options, txnTag));
     return builder;
   }
 
@@ -752,6 +749,7 @@ abstract class AbstractReadContext
       builder.setPartitionToken(partitionToken);
     }
     if (readOptions.hasTag()) {
+      // TODO: set transaction tag when executed within a RW transaction
       builder.setRequestOptions(
           RequestOptions.newBuilder().setRequestTag(readOptions.tag()).build());
     }
