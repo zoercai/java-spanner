@@ -64,6 +64,14 @@ interface ConnectionStatementExecutor {
 
   StatementResult statementShowOptimizerVersion();
 
+  StatementResult statementSetStatementTag(String tag);
+
+  StatementResult statementShowStatementTag();
+
+  StatementResult statementSetTransactionTag(String tag);
+
+  StatementResult statementShowTransactionTag();
+
   StatementResult statementBeginTransaction();
 
   StatementResult statementCommit();
