@@ -23,6 +23,7 @@ import com.google.api.core.SettableApiFuture;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.ErrorCode;
 import com.google.cloud.spanner.Mutation;
+import com.google.cloud.spanner.Options;
 import com.google.cloud.spanner.Options.QueryOption;
 import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.ResultSet;
@@ -41,17 +42,24 @@ import java.util.List;
  */
 class DmlBatch extends AbstractBaseUnitOfWork {
   private final UnitOfWork transaction;
+  private final String statementTag;
   private final List<ParsedStatement> statements = new ArrayList<>();
   private UnitOfWorkState state = UnitOfWorkState.STARTED;
 
   static class Builder extends AbstractBaseUnitOfWork.Builder<Builder, DmlBatch> {
     private UnitOfWork transaction;
+    private String statementTag;
 
     private Builder() {}
 
     Builder setTransaction(UnitOfWork transaction) {
       Preconditions.checkNotNull(transaction);
       this.transaction = transaction;
+      return this;
+    }
+
+    Builder setStatementTag(String tag) {
+      this.statementTag = tag;
       return this;
     }
 
@@ -69,6 +77,7 @@ class DmlBatch extends AbstractBaseUnitOfWork {
   private DmlBatch(Builder builder) {
     super(builder);
     this.transaction = builder.transaction;
+    this.statementTag = builder.statementTag;
   }
 
   @Override
@@ -154,7 +163,7 @@ class DmlBatch extends AbstractBaseUnitOfWork {
   }
 
   @Override
-  public ApiFuture<long[]> runBatchAsync(UpdateOption... options) {
+  public ApiFuture<long[]> runBatchAsync() {
     ConnectionPreconditions.checkState(
         state == UnitOfWorkState.STARTED, "The batch is no longer active and cannot be ran");
     if (statements.isEmpty()) {
@@ -168,6 +177,8 @@ class DmlBatch extends AbstractBaseUnitOfWork {
     // executed AFTER a Future is done, which means that a user could read the state of the Batch
     // before it has been changed.
     final SettableApiFuture<long[]> res = SettableApiFuture.create();
+    UpdateOption[] options =
+        statementTag == null ? new UpdateOption[0] : new UpdateOption[] {Options.tag(statementTag)};
     ApiFuture<long[]> updateCounts = transaction.executeBatchUpdateAsync(statements, options);
     ApiFutures.addCallback(
         updateCounts,
