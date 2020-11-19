@@ -114,12 +114,14 @@ public class InstanceAdminClientTest {
     InstanceConfigName config = InstanceConfigName.of("[PROJECT]", "[INSTANCE_CONFIG]");
     String displayName = "displayName1615086568";
     int nodeCount = 1539922066;
+    int processingUnits = 329117885;
     Instance expectedResponse =
         Instance.newBuilder()
             .setName(name.toString())
             .setConfig(config.toString())
             .setDisplayName(displayName)
             .setNodeCount(nodeCount)
+            .setProcessingUnits(processingUnits)
             .build();
     Operation resultOperation =
         Operation.newBuilder()
@@ -176,12 +178,14 @@ public class InstanceAdminClientTest {
     InstanceConfigName config = InstanceConfigName.of("[PROJECT]", "[INSTANCE_CONFIG]");
     String displayName = "displayName1615086568";
     int nodeCount = 1539922066;
+    int processingUnits = 329117885;
     Instance expectedResponse =
         Instance.newBuilder()
             .setName(name.toString())
             .setConfig(config.toString())
             .setDisplayName(displayName)
             .setNodeCount(nodeCount)
+            .setProcessingUnits(processingUnits)
             .build();
     Operation resultOperation =
         Operation.newBuilder()
@@ -372,12 +376,14 @@ public class InstanceAdminClientTest {
     InstanceConfigName config = InstanceConfigName.of("[PROJECT]", "[INSTANCE_CONFIG]");
     String displayName = "displayName1615086568";
     int nodeCount = 1539922066;
+    int processingUnits = 329117885;
     Instance expectedResponse =
         Instance.newBuilder()
             .setName(name2.toString())
             .setConfig(config.toString())
             .setDisplayName(displayName)
             .setNodeCount(nodeCount)
+            .setProcessingUnits(processingUnits)
             .build();
     mockInstanceAdmin.addResponse(expectedResponse);
 
