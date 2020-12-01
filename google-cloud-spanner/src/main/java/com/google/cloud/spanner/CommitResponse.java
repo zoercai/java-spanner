@@ -24,6 +24,10 @@ public class CommitResponse {
 
   private final Timestamp commitTimestamp;
 
+  static CommitResponse fromProto(com.google.spanner.v1.CommitResponse proto) {
+    return new CommitResponse(Timestamp.fromProto(proto.getCommitTimestamp()));
+  }
+
   public CommitResponse(Timestamp commitTimestamp) {
     this.commitTimestamp = commitTimestamp;
   }

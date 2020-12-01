@@ -1267,7 +1267,7 @@ public class InlineBeginTransactionTest {
     assertThat(mockSpanner.countRequestsOfType(ExecuteSqlRequest.class)).isEqualTo(2L);
     assertThat(mockSpanner.countRequestsOfType(CommitRequest.class)).isEqualTo(1L);
     assertThat(countTransactionsStarted()).isEqualTo(1);
-    List<AbstractMessage> requests = mockSpanner.getRequestsOfType(ExecuteSqlRequest.class);
+    List<ExecuteSqlRequest> requests = mockSpanner.getRequestsOfType(ExecuteSqlRequest.class);
     assertThat(requests.get(0)).isInstanceOf(ExecuteSqlRequest.class);
     assertThat(((ExecuteSqlRequest) requests.get(0)).getSql()).isEqualTo(UPDATE_STATEMENT.getSql());
     assertThat(requests.get(1)).isInstanceOf(ExecuteSqlRequest.class);
@@ -1297,7 +1297,7 @@ public class InlineBeginTransactionTest {
     assertThat(countRequests(CommitRequest.class)).isEqualTo(1);
     assertThat(countTransactionsStarted()).isEqualTo(1);
 
-    List<AbstractMessage> requests = mockSpanner.getRequestsOfType(ExecuteSqlRequest.class);
+    List<ExecuteSqlRequest> requests = mockSpanner.getRequestsOfType(ExecuteSqlRequest.class);
     assertThat(requests.get(0)).isInstanceOf(ExecuteSqlRequest.class);
     ExecuteSqlRequest request1 = (ExecuteSqlRequest) requests.get(0);
     assertThat(request1.getSql()).isEqualTo(SELECT1_UNION_ALL_SELECT2.getSql());

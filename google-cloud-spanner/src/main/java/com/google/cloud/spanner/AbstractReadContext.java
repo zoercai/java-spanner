@@ -47,6 +47,7 @@ import com.google.spanner.v1.ExecuteSqlRequest.QueryMode;
 import com.google.spanner.v1.ExecuteSqlRequest.QueryOptions;
 import com.google.spanner.v1.PartialResultSet;
 import com.google.spanner.v1.ReadRequest;
+import com.google.spanner.v1.RequestOptions;
 import com.google.spanner.v1.Transaction;
 import com.google.spanner.v1.TransactionOptions;
 import com.google.spanner.v1.TransactionSelector;
@@ -554,7 +555,14 @@ abstract class AbstractReadContext
     return builder.build();
   }
 
-  ExecuteSqlRequest.Builder getExecuteSqlRequestBuilder(Statement statement, QueryMode queryMode) {
+  RequestOptions buildRequestOptions(Options options) {
+    RequestOptions.Builder builder = RequestOptions.newBuilder();
+    if (options.hasPriority()) builder.setPriority(options.priority());
+    return builder.build();
+  }
+
+  ExecuteSqlRequest.Builder getExecuteSqlRequestBuilder(
+      Statement statement, QueryMode queryMode, Options options) {
     ExecuteSqlRequest.Builder builder =
         ExecuteSqlRequest.newBuilder()
             .setSql(statement.getSql())
@@ -574,10 +582,12 @@ abstract class AbstractReadContext
     }
     builder.setSeqno(getSeqNo());
     builder.setQueryOptions(buildQueryOptions(statement.getQueryOptions()));
+    builder.setRequestOptions(buildRequestOptions(options));
     return builder;
   }
 
-  ExecuteBatchDmlRequest.Builder getExecuteBatchDmlRequestBuilder(Iterable<Statement> statements) {
+  ExecuteBatchDmlRequest.Builder getExecuteBatchDmlRequestBuilder(
+      Iterable<Statement> statements, Options options) {
     ExecuteBatchDmlRequest.Builder builder =
         ExecuteBatchDmlRequest.newBuilder().setSession(session.getName());
     int idx = 0;
@@ -603,13 +613,14 @@ abstract class AbstractReadContext
       builder.setTransaction(selector);
     }
     builder.setSeqno(getSeqNo());
+    builder.setRequestOptions(buildRequestOptions(options));
     return builder;
   }
 
   ResultSet executeQueryInternalWithOptions(
       final Statement statement,
       final com.google.spanner.v1.ExecuteSqlRequest.QueryMode queryMode,
-      Options options,
+      final Options options,
       final ByteString partitionToken) {
     beforeReadOrQuery();
     final int prefetchChunks =
@@ -620,7 +631,7 @@ abstract class AbstractReadContext
           CloseableIterator<PartialResultSet> startStream(@Nullable ByteString resumeToken) {
             GrpcStreamIterator stream = new GrpcStreamIterator(statement, prefetchChunks);
             final ExecuteSqlRequest.Builder request =
-                getExecuteSqlRequestBuilder(statement, queryMode);
+                getExecuteSqlRequestBuilder(statement, queryMode, options);
             if (partitionToken != null) {
               request.setPartitionToken(partitionToken);
             }
@@ -707,7 +718,7 @@ abstract class AbstractReadContext
       @Nullable String index,
       KeySet keys,
       Iterable<String> columns,
-      Options readOptions,
+      final Options readOptions,
       ByteString partitionToken) {
     beforeReadOrQuery();
     final ReadRequest.Builder builder =
@@ -740,6 +751,7 @@ abstract class AbstractReadContext
             if (selector != null) {
               builder.setTransaction(selector);
             }
+            builder.setRequestOptions(buildRequestOptions(readOptions));
             SpannerRpc.StreamingCall call =
                 rpc.read(builder.build(), stream.consumer(), session.getOptions());
             call.request(prefetchChunks);

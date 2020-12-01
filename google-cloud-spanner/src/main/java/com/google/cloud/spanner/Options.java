@@ -17,6 +17,7 @@
 package com.google.cloud.spanner;
 
 import com.google.common.base.Preconditions;
+import com.google.spanner.v1.RequestOptions.Priority;
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -24,17 +25,50 @@ import java.util.Objects;
 public final class Options implements Serializable {
   private static final long serialVersionUID = 8067099123096783941L;
 
+  /** Priority for an RPC. */
+  public enum RpcPriority {
+    LOW(Priority.PRIORITY_LOW),
+    MEDIUM(Priority.PRIORITY_MEDIUM),
+    HIGH(Priority.PRIORITY_HIGH);
+
+    private final Priority proto;
+
+    private RpcPriority(Priority proto) {
+      this.proto = proto;
+    }
+
+    Priority toProto() {
+      return proto;
+    }
+
+    static RpcPriority fromProto(Priority proto) {
+      for (RpcPriority prio : RpcPriority.values()) {
+        if (prio.proto == proto) {
+          return prio;
+        }
+      }
+      throw new IllegalArgumentException("Unknown priority: " + proto);
+    }
+  }
+
   /** Marker interface to mark options applicable to both Read and Query operations */
   public interface ReadAndQueryOption extends ReadOption, QueryOption {}
 
   /** Marker interface to mark options applicable to read operation */
   public interface ReadOption {}
 
+  /** Marker interface to mark options applicable to Read, Query, Update and Write operations */
+  public interface ReadQueryUpdateTransactionOption
+      extends ReadOption, QueryOption, UpdateOption, TransactionOption {}
+
   /** Marker interface to mark options applicable to query operation. */
   public interface QueryOption {}
 
   /** Marker interface to mark options applicable to write operations */
   public interface TransactionOption {}
+
+  /** Marker interface to mark options applicable to update operation. */
+  public interface UpdateOption {}
 
   /** Marker interface to mark options applicable to list operations in admin API. */
   public interface ListOption {}
@@ -65,6 +99,11 @@ public final class Options implements Serializable {
   public static ReadAndQueryOption bufferRows(int bufferRows) {
     Preconditions.checkArgument(bufferRows > 0, "bufferRows should be greater than 0");
     return new BufferRowsOption(bufferRows);
+  }
+
+  /** Specifies the priority to use for the RPC. */
+  public static ReadQueryUpdateTransactionOption priority(RpcPriority priority) {
+    return new PriorityOption(priority);
   }
 
   /**
@@ -136,12 +175,27 @@ public final class Options implements Serializable {
     }
   }
 
+  static final class PriorityOption extends InternalOption
+      implements ReadQueryUpdateTransactionOption {
+    private final RpcPriority priority;
+
+    PriorityOption(RpcPriority priority) {
+      this.priority = priority;
+    }
+
+    @Override
+    void appendToOptions(Options options) {
+      options.priority = priority;
+    }
+  }
+
   private Long limit;
   private Integer prefetchChunks;
   private Integer bufferRows;
   private Integer pageSize;
   private String pageToken;
   private String filter;
+  private RpcPriority priority;
 
   // Construction is via factory methods below.
   private Options() {}
@@ -194,6 +248,14 @@ public final class Options implements Serializable {
     return filter;
   }
 
+  boolean hasPriority() {
+    return priority != null;
+  }
+
+  Priority priority() {
+    return priority == null ? null : priority.proto;
+  }
+
   @Override
   public String toString() {
     StringBuilder b = new StringBuilder();
@@ -211,6 +273,9 @@ public final class Options implements Serializable {
     }
     if (filter != null) {
       b.append("filter: ").append(filter).append(' ');
+    }
+    if (priority != null) {
+      b.append("priority: ").append(priority).append(' ');
     }
     return b.toString();
   }
@@ -240,7 +305,8 @@ public final class Options implements Serializable {
         && (!hasPageSize() && !that.hasPageSize()
             || hasPageSize() && that.hasPageSize() && Objects.equals(pageSize(), that.pageSize()))
         && Objects.equals(pageToken(), that.pageToken())
-        && Objects.equals(filter(), that.filter());
+        && Objects.equals(filter(), that.filter())
+        && Objects.equals(priority(), that.priority());
   }
 
   @Override
@@ -264,6 +330,9 @@ public final class Options implements Serializable {
     if (filter != null) {
       result = 31 * result + filter.hashCode();
     }
+    if (priority != null) {
+      result = 31 * result + priority.hashCode();
+    }
     return result;
   }
 
@@ -285,6 +354,26 @@ public final class Options implements Serializable {
       }
     }
     return readOptions;
+  }
+
+  static Options fromUpdateOptions(UpdateOption... options) {
+    Options updateOptions = new Options();
+    for (UpdateOption option : options) {
+      if (option instanceof InternalOption) {
+        ((InternalOption) option).appendToOptions(updateOptions);
+      }
+    }
+    return updateOptions;
+  }
+
+  static Options fromTransactionOptions(TransactionOption... options) {
+    Options transactionOptions = new Options();
+    for (TransactionOption option : options) {
+      if (option instanceof InternalOption) {
+        ((InternalOption) option).appendToOptions(transactionOptions);
+      }
+    }
+    return transactionOptions;
   }
 
   static Options fromListOptions(ListOption... options) {

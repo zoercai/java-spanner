@@ -17,7 +17,9 @@
 package com.google.cloud.spanner;
 
 import com.google.cloud.Timestamp;
+import com.google.cloud.spanner.Options.RpcPriority;
 import com.google.cloud.spanner.Options.TransactionOption;
+import com.google.cloud.spanner.Options.UpdateOption;
 
 /**
  * Interface for all the APIs that are used to read/write data into a Cloud Spanner database. An
@@ -74,7 +76,9 @@ public interface DatabaseClient {
    *         .set("LastName")
    *         .to("Joel")
    *         .build();
-   * dbClient.writeWithOptions(Collections.singletonList(mutation));
+   * dbClient.writeWithOptions(
+   *         Collections.singletonList(mutation),
+   *         Options.priority(RpcPriority.HIGH));
    * }</pre>
    *
    * @return a response with the timestamp at which the write was committed
@@ -137,7 +141,9 @@ public interface DatabaseClient {
    *         .set("LastName")
    *         .to("Joel")
    *         .build();
-   * dbClient.writeAtLeastOnce(Collections.singletonList(mutation));
+   * dbClient.writeAtLeastOnceWithOptions(
+   *         Collections.singletonList(mutation),
+   *         Options.priority(RpcPriority.LOW));
    * }</pre>
    *
    * @return a response with the timestamp at which the write was committed
@@ -307,8 +313,16 @@ public interface DatabaseClient {
    *       }
    *     });
    * </code></pre>
+   *
+   * Options for a transaction can include:
+   *
+   * <ul>
+   *   <li>{@link Options#priority(com.google.cloud.spanner.Options.RpcPriority)}: The {@link
+   *       RpcPriority} to use for the commit request of the transaction. The priority will not
+   *       automatically be applied to any other requests on the transaction.
+   * </ul>
    */
-  TransactionRunner readWriteTransaction();
+  TransactionRunner readWriteTransaction(TransactionOption... options);
 
   /**
    * Returns a transaction manager which allows manual management of transaction lifecycle. This API
@@ -337,8 +351,16 @@ public interface DatabaseClient {
    *   }
    * }
    * }</pre>
+   *
+   * Options for a transaction can include:
+   *
+   * <ul>
+   *   <li>{@link Options#priority(com.google.cloud.spanner.Options.RpcPriority)}: The {@link
+   *       RpcPriority} to use for the commit request of the transaction. The priority will not
+   *       automatically be applied to any other requests on the transaction.
+   * </ul>
    */
-  TransactionManager transactionManager();
+  TransactionManager transactionManager(TransactionOption... options);
 
   /**
    * Returns an asynchronous transaction runner for executing a single logical transaction with
@@ -370,8 +392,16 @@ public interface DatabaseClient {
    *         },
    *         executor);
    * </code></pre>
+   *
+   * Options for a transaction can include:
+   *
+   * <ul>
+   *   <li>{@link Options#priority(com.google.cloud.spanner.Options.RpcPriority)}: The {@link
+   *       RpcPriority} to use for the commit request of the transaction. The priority will not
+   *       automatically be applied to any other requests on the transaction.
+   * </ul>
    */
-  AsyncRunner runAsync();
+  AsyncRunner runAsync(TransactionOption... options);
 
   /**
    * Returns an asynchronous transaction manager which allows manual management of transaction
@@ -458,8 +488,16 @@ public interface DatabaseClient {
    *   }
    * }
    * }</pre>
+   *
+   * Options for a transaction can include:
+   *
+   * <ul>
+   *   <li>{@link Options#priority(com.google.cloud.spanner.Options.RpcPriority)}: The {@link
+   *       RpcPriority} to use for the commit request of the transaction. The priority will not
+   *       automatically be applied to any other requests on the transaction.
+   * </ul>
    */
-  AsyncTransactionManager transactionManagerAsync();
+  AsyncTransactionManager transactionManagerAsync(TransactionOption... options);
 
   /**
    * Returns the lower bound of rows modified by this DML statement.
@@ -508,5 +546,5 @@ public interface DatabaseClient {
    * <p>Given the above, Partitioned DML is good fit for large, database-wide, operations that are
    * idempotent, such as deleting old rows from a very large table.
    */
-  long executePartitionedUpdate(Statement stmt);
+  long executePartitionedUpdate(Statement stmt, UpdateOption... options);
 }

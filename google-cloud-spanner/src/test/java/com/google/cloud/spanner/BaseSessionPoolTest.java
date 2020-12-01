@@ -58,12 +58,19 @@ abstract class BaseSessionPoolTest {
     }
   }
 
+  @SuppressWarnings("unchecked")
   SessionImpl mockSession() {
     final SessionImpl session = mock(SessionImpl.class);
     when(session.getName())
         .thenReturn(
             "projects/dummy/instances/dummy/database/dummy/sessions/session" + sessionIndex);
     when(session.asyncClose()).thenReturn(ApiFutures.immediateFuture(Empty.getDefaultInstance()));
+    when(session.writeWithOptions(any(Iterable.class)))
+        .thenReturn(
+            CommitResponse.fromProto(com.google.spanner.v1.CommitResponse.getDefaultInstance()));
+    when(session.writeAtLeastOnceWithOptions(any(Iterable.class)))
+        .thenReturn(
+            CommitResponse.fromProto(com.google.spanner.v1.CommitResponse.getDefaultInstance()));
     sessionIndex++;
     return session;
   }
