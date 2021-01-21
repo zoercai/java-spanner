@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,9 +15,11 @@
  */
 
 /**
- * The interfaces provided are listed below, along with usage samples.
+ * A client to Cloud Spanner Database Admin API.
  *
- * <p>======================= DatabaseAdminClient =======================
+ * <p>The interfaces provided are listed below, along with usage samples.
+ *
+ * <p>=================== DatabaseAdminClient ===================
  *
  * <p>Service Description: Cloud Spanner Database Admin API
  *
@@ -26,8 +28,17 @@
  * list backups for a database and to restore from an existing backup.
  *
  * <p>Sample for DatabaseAdminClient:
+ *
+ * <pre>
+ * <code>
+ * try (DatabaseAdminClient databaseAdminClient = DatabaseAdminClient.create()) {
+ *   DatabaseName name = DatabaseName.of("[PROJECT]", "[INSTANCE]", "[DATABASE]");
+ *   Database response = databaseAdminClient.getDatabase(name);
+ * }
+ * </code>
+ * </pre>
  */
-@Generated("by gapic-generator-java")
+@Generated("by gapic-generator")
 package com.google.cloud.spanner.admin.database.v1;
 
 import javax.annotation.Generated;

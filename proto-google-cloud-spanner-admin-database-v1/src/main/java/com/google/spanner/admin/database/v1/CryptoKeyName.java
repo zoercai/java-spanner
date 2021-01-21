@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.spanner.v1;
+package com.google.spanner.admin.database.v1;
 
 import com.google.api.pathtemplate.PathTemplate;
 import com.google.api.resourcenames.ResourceName;
@@ -26,28 +26,33 @@ import java.util.Map;
 
 /** AUTO-GENERATED DOCUMENTATION AND CLASS */
 @javax.annotation.Generated("by GAPIC protoc plugin")
-public class DatabaseName implements ResourceName {
+public class CryptoKeyName implements ResourceName {
 
   private static final PathTemplate PATH_TEMPLATE =
       PathTemplate.createWithoutUrlEncoding(
-          "projects/{project}/instances/{instance}/databases/{database}");
+          "projects/{project}/locations/{location}/keyRings/{key_ring}/cryptoKeys/{crypto_key}");
 
   private volatile Map<String, String> fieldValuesMap;
 
   private final String project;
-  private final String instance;
-  private final String database;
+  private final String location;
+  private final String keyRing;
+  private final String cryptoKey;
 
   public String getProject() {
     return project;
   }
 
-  public String getInstance() {
-    return instance;
+  public String getLocation() {
+    return location;
   }
 
-  public String getDatabase() {
-    return database;
+  public String getKeyRing() {
+    return keyRing;
+  }
+
+  public String getCryptoKey() {
+    return cryptoKey;
   }
 
   public static Builder newBuilder() {
@@ -58,46 +63,58 @@ public class DatabaseName implements ResourceName {
     return new Builder(this);
   }
 
-  private DatabaseName(Builder builder) {
+  private CryptoKeyName(Builder builder) {
     project = Preconditions.checkNotNull(builder.getProject());
-    instance = Preconditions.checkNotNull(builder.getInstance());
-    database = Preconditions.checkNotNull(builder.getDatabase());
+    location = Preconditions.checkNotNull(builder.getLocation());
+    keyRing = Preconditions.checkNotNull(builder.getKeyRing());
+    cryptoKey = Preconditions.checkNotNull(builder.getCryptoKey());
   }
 
-  public static DatabaseName of(String project, String instance, String database) {
-    return newBuilder().setProject(project).setInstance(instance).setDatabase(database).build();
-  }
-
-  public static String format(String project, String instance, String database) {
+  public static CryptoKeyName of(
+      String project, String location, String keyRing, String cryptoKey) {
     return newBuilder()
         .setProject(project)
-        .setInstance(instance)
-        .setDatabase(database)
+        .setLocation(location)
+        .setKeyRing(keyRing)
+        .setCryptoKey(cryptoKey)
+        .build();
+  }
+
+  public static String format(String project, String location, String keyRing, String cryptoKey) {
+    return newBuilder()
+        .setProject(project)
+        .setLocation(location)
+        .setKeyRing(keyRing)
+        .setCryptoKey(cryptoKey)
         .build()
         .toString();
   }
 
-  public static DatabaseName parse(String formattedString) {
+  public static CryptoKeyName parse(String formattedString) {
     if (formattedString.isEmpty()) {
       return null;
     }
     Map<String, String> matchMap =
         PATH_TEMPLATE.validatedMatch(
-            formattedString, "DatabaseName.parse: formattedString not in valid format");
-    return of(matchMap.get("project"), matchMap.get("instance"), matchMap.get("database"));
+            formattedString, "CryptoKeyName.parse: formattedString not in valid format");
+    return of(
+        matchMap.get("project"),
+        matchMap.get("location"),
+        matchMap.get("key_ring"),
+        matchMap.get("crypto_key"));
   }
 
-  public static List<DatabaseName> parseList(List<String> formattedStrings) {
-    List<DatabaseName> list = new ArrayList<>(formattedStrings.size());
+  public static List<CryptoKeyName> parseList(List<String> formattedStrings) {
+    List<CryptoKeyName> list = new ArrayList<>(formattedStrings.size());
     for (String formattedString : formattedStrings) {
       list.add(parse(formattedString));
     }
     return list;
   }
 
-  public static List<String> toStringList(List<DatabaseName> values) {
+  public static List<String> toStringList(List<CryptoKeyName> values) {
     List<String> list = new ArrayList<String>(values.size());
-    for (DatabaseName value : values) {
+    for (CryptoKeyName value : values) {
       if (value == null) {
         list.add("");
       } else {
@@ -117,8 +134,9 @@ public class DatabaseName implements ResourceName {
         if (fieldValuesMap == null) {
           ImmutableMap.Builder<String, String> fieldMapBuilder = ImmutableMap.builder();
           fieldMapBuilder.put("project", project);
-          fieldMapBuilder.put("instance", instance);
-          fieldMapBuilder.put("database", database);
+          fieldMapBuilder.put("location", location);
+          fieldMapBuilder.put("keyRing", keyRing);
+          fieldMapBuilder.put("cryptoKey", cryptoKey);
           fieldValuesMap = fieldMapBuilder.build();
         }
       }
@@ -133,26 +151,31 @@ public class DatabaseName implements ResourceName {
   @Override
   public String toString() {
     return PATH_TEMPLATE.instantiate(
-        "project", project, "instance", instance, "database", database);
+        "project", project, "location", location, "key_ring", keyRing, "crypto_key", cryptoKey);
   }
 
-  /** Builder for DatabaseName. */
+  /** Builder for CryptoKeyName. */
   public static class Builder {
 
     private String project;
-    private String instance;
-    private String database;
+    private String location;
+    private String keyRing;
+    private String cryptoKey;
 
     public String getProject() {
       return project;
     }
 
-    public String getInstance() {
-      return instance;
+    public String getLocation() {
+      return location;
     }
 
-    public String getDatabase() {
-      return database;
+    public String getKeyRing() {
+      return keyRing;
+    }
+
+    public String getCryptoKey() {
+      return cryptoKey;
     }
 
     public Builder setProject(String project) {
@@ -160,26 +183,32 @@ public class DatabaseName implements ResourceName {
       return this;
     }
 
-    public Builder setInstance(String instance) {
-      this.instance = instance;
+    public Builder setLocation(String location) {
+      this.location = location;
       return this;
     }
 
-    public Builder setDatabase(String database) {
-      this.database = database;
+    public Builder setKeyRing(String keyRing) {
+      this.keyRing = keyRing;
+      return this;
+    }
+
+    public Builder setCryptoKey(String cryptoKey) {
+      this.cryptoKey = cryptoKey;
       return this;
     }
 
     private Builder() {}
 
-    private Builder(DatabaseName databaseName) {
-      project = databaseName.project;
-      instance = databaseName.instance;
-      database = databaseName.database;
+    private Builder(CryptoKeyName cryptoKeyName) {
+      project = cryptoKeyName.project;
+      location = cryptoKeyName.location;
+      keyRing = cryptoKeyName.keyRing;
+      cryptoKey = cryptoKeyName.cryptoKey;
     }
 
-    public DatabaseName build() {
-      return new DatabaseName(this);
+    public CryptoKeyName build() {
+      return new CryptoKeyName(this);
     }
   }
 
@@ -188,11 +217,12 @@ public class DatabaseName implements ResourceName {
     if (o == this) {
       return true;
     }
-    if (o instanceof DatabaseName) {
-      DatabaseName that = (DatabaseName) o;
+    if (o instanceof CryptoKeyName) {
+      CryptoKeyName that = (CryptoKeyName) o;
       return (this.project.equals(that.project))
-          && (this.instance.equals(that.instance))
-          && (this.database.equals(that.database));
+          && (this.location.equals(that.location))
+          && (this.keyRing.equals(that.keyRing))
+          && (this.cryptoKey.equals(that.cryptoKey));
     }
     return false;
   }
@@ -203,9 +233,11 @@ public class DatabaseName implements ResourceName {
     h *= 1000003;
     h ^= project.hashCode();
     h *= 1000003;
-    h ^= instance.hashCode();
+    h ^= location.hashCode();
     h *= 1000003;
-    h ^= database.hashCode();
+    h ^= keyRing.hashCode();
+    h *= 1000003;
+    h ^= cryptoKey.hashCode();
     return h;
   }
 }

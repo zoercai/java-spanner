@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,28 +23,18 @@ import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import javax.annotation.Generated;
 
-// AUTO-GENERATED DOCUMENTATION AND CLASS.
-@Generated("by gapic-generator-java")
+/** AUTO-GENERATED DOCUMENTATION AND CLASS */
+@javax.annotation.Generated("by GAPIC protoc plugin")
 public class InstanceName implements ResourceName {
-  private static final PathTemplate PROJECT_INSTANCE =
+
+  private static final PathTemplate PATH_TEMPLATE =
       PathTemplate.createWithoutUrlEncoding("projects/{project}/instances/{instance}");
+
   private volatile Map<String, String> fieldValuesMap;
+
   private final String project;
   private final String instance;
-
-  @Deprecated
-  protected InstanceName() {
-    project = null;
-    instance = null;
-  }
-
-  private InstanceName(Builder builder) {
-    project = Preconditions.checkNotNull(builder.getProject());
-    instance = Preconditions.checkNotNull(builder.getInstance());
-  }
 
   public String getProject() {
     return project;
@@ -62,6 +52,11 @@ public class InstanceName implements ResourceName {
     return new Builder(this);
   }
 
+  private InstanceName(Builder builder) {
+    project = Preconditions.checkNotNull(builder.getProject());
+    instance = Preconditions.checkNotNull(builder.getInstance());
+  }
+
   public static InstanceName of(String project, String instance) {
     return newBuilder().setProject(project).setInstance(instance).build();
   }
@@ -75,7 +70,7 @@ public class InstanceName implements ResourceName {
       return null;
     }
     Map<String, String> matchMap =
-        PROJECT_INSTANCE.validatedMatch(
+        PATH_TEMPLATE.validatedMatch(
             formattedString, "InstanceName.parse: formattedString not in valid format");
     return of(matchMap.get("project"), matchMap.get("instance"));
   }
@@ -89,7 +84,7 @@ public class InstanceName implements ResourceName {
   }
 
   public static List<String> toStringList(List<InstanceName> values) {
-    List<String> list = new ArrayList<>(values.size());
+    List<String> list = new ArrayList<String>(values.size());
     for (InstanceName value : values) {
       if (value == null) {
         list.add("");
@@ -101,21 +96,16 @@ public class InstanceName implements ResourceName {
   }
 
   public static boolean isParsableFrom(String formattedString) {
-    return PROJECT_INSTANCE.matches(formattedString);
+    return PATH_TEMPLATE.matches(formattedString);
   }
 
-  @Override
   public Map<String, String> getFieldValuesMap() {
     if (fieldValuesMap == null) {
       synchronized (this) {
         if (fieldValuesMap == null) {
           ImmutableMap.Builder<String, String> fieldMapBuilder = ImmutableMap.builder();
-          if (project != null) {
-            fieldMapBuilder.put("project", project);
-          }
-          if (instance != null) {
-            fieldMapBuilder.put("instance", instance);
-          }
+          fieldMapBuilder.put("project", project);
+          fieldMapBuilder.put("instance", instance);
           fieldValuesMap = fieldMapBuilder.build();
         }
       }
@@ -129,38 +119,14 @@ public class InstanceName implements ResourceName {
 
   @Override
   public String toString() {
-    return PROJECT_INSTANCE.instantiate("project", project, "instance", instance);
+    return PATH_TEMPLATE.instantiate("project", project, "instance", instance);
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (o == this) {
-      return true;
-    }
-    if (o != null || getClass() == o.getClass()) {
-      InstanceName that = ((InstanceName) o);
-      return Objects.equals(this.project, that.project)
-          && Objects.equals(this.instance, that.instance);
-    }
-    return false;
-  }
-
-  @Override
-  public int hashCode() {
-    int h = 1;
-    h *= 1000003;
-    h ^= Objects.hashCode(project);
-    h *= 1000003;
-    h ^= Objects.hashCode(instance);
-    return h;
-  }
-
-  /** Builder for projects/{project}/instances/{instance}. */
+  /** Builder for InstanceName. */
   public static class Builder {
+
     private String project;
     private String instance;
-
-    protected Builder() {}
 
     public String getProject() {
       return project;
@@ -180,6 +146,8 @@ public class InstanceName implements ResourceName {
       return this;
     }
 
+    private Builder() {}
+
     private Builder(InstanceName instanceName) {
       project = instanceName.project;
       instance = instanceName.instance;
@@ -188,5 +156,27 @@ public class InstanceName implements ResourceName {
     public InstanceName build() {
       return new InstanceName(this);
     }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (o instanceof InstanceName) {
+      InstanceName that = (InstanceName) o;
+      return (this.project.equals(that.project)) && (this.instance.equals(that.instance));
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    int h = 1;
+    h *= 1000003;
+    h ^= project.hashCode();
+    h *= 1000003;
+    h ^= instance.hashCode();
+    return h;
   }
 }
