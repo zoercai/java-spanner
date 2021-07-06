@@ -17,6 +17,8 @@
 package com.google.cloud.spanner.it;
 
 import static com.google.cloud.spanner.SpannerMatchers.isSpannerException;
+import static com.google.cloud.spanner.Type.array;
+import static com.google.cloud.spanner.Type.json;
 import static com.google.cloud.spanner.testing.EmulatorSpannerHelper.isUsingEmulator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -136,7 +138,7 @@ public class ITWriteTest {
   private String lastKey;
 
   private Timestamp write(Mutation m) {
-    return client.write(Arrays.asList(m));
+    return client.write(Collections.singletonList(m));
   }
 
   private Mutation.WriteBuilder baseInsert() {
@@ -152,7 +154,7 @@ public class ITWriteTest {
   @Test
   public void writeAtLeastOnce() {
     client.writeAtLeastOnce(
-        Arrays.asList(
+        Collections.singletonList(
             Mutation.newInsertOrUpdateBuilder("T")
                 .set("K")
                 .to(lastKey = uniqueString())
@@ -169,7 +171,7 @@ public class ITWriteTest {
     assumeFalse("Emulator does not return commit statistics", isUsingEmulator());
     CommitResponse response =
         client.writeWithOptions(
-            Arrays.asList(
+            Collections.singletonList(
                 Mutation.newInsertOrUpdateBuilder("T")
                     .set("K")
                     .to(lastKey = uniqueString())
@@ -188,7 +190,7 @@ public class ITWriteTest {
     assumeFalse("Emulator does not return commit statistics", isUsingEmulator());
     CommitResponse response =
         client.writeAtLeastOnceWithOptions(
-            Arrays.asList(
+            Collections.singletonList(
                 Mutation.newInsertOrUpdateBuilder("T")
                     .set("K")
                     .to(lastKey = uniqueString())
@@ -205,7 +207,7 @@ public class ITWriteTest {
   @Test
   public void writeAlreadyExists() {
     client.write(
-        Arrays.asList(
+        Collections.singletonList(
             Mutation.newInsertBuilder("T")
                 .set("K")
                 .to(lastKey = "key1")
@@ -218,7 +220,7 @@ public class ITWriteTest {
 
     try {
       client.write(
-          Arrays.asList(
+          Collections.singletonList(
               Mutation.newInsertBuilder("T")
                   .set("K")
                   .to(lastKey)
@@ -238,7 +240,7 @@ public class ITWriteTest {
   @Test
   public void emptyWrite() {
     try {
-      client.write(Arrays.<Mutation>asList());
+      client.write(Collections.emptyList());
       fail("Expected exception");
     } catch (SpannerException ex) {
       assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_ARGUMENT);
@@ -326,9 +328,20 @@ public class ITWriteTest {
   @Test
   public void writeJson() {
     assumeFalse("Emulator does not yet support JSON", EmulatorSpannerHelper.isUsingEmulator());
+    write(baseInsert().set("JsonValue").to(Value.json("{\"rating\":9,\"open\":true}")).build());
+    Struct row = readLastRow("JsonValue");
+    assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getColumnType("JsonValue")).isEqualTo(json());
+    assertThat(row.getJson(0)).isEqualTo("{\"open\":true,\"rating\":9}");
+  }
+
+  @Test
+  public void writeJsonEmpty() {
+    assumeFalse("Emulator does not yet support JSON", EmulatorSpannerHelper.isUsingEmulator());
     write(baseInsert().set("JsonValue").to(Value.json("{}")).build());
     Struct row = readLastRow("JsonValue");
     assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getColumnType("JsonValue")).isEqualTo(json());
     assertThat(row.getJson(0)).isEqualTo("{}");
   }
 
@@ -338,6 +351,7 @@ public class ITWriteTest {
     write(baseInsert().set("JsonValue").to(Value.json(null)).build());
     Struct row = readLastRow("JsonValue");
     assertThat(row.isNull(0)).isTrue();
+    assertThat(row.getColumnType("JsonValue")).isEqualTo(json());
   }
 
   @Test
@@ -590,7 +604,7 @@ public class ITWriteTest {
 
   @Test
   public void writeStringArrayEmpty() {
-    write(baseInsert().set("StringArrayValue").toStringArray(Arrays.<String>asList()).build());
+    write(baseInsert().set("StringArrayValue").toStringArray(Collections.emptyList()).build());
     Struct row = readLastRow("StringArrayValue");
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getStringList(0)).containsExactly();
@@ -611,6 +625,7 @@ public class ITWriteTest {
     write(baseInsert().set("JsonArrayValue").toJsonArray(null).build());
     Struct row = readLastRow("JsonArrayValue");
     assertThat(row.isNull(0)).isTrue();
+    assertThat(row.getColumnType("JsonArrayValue")).isEqualTo(array(json()));
   }
 
   @Test
@@ -619,6 +634,7 @@ public class ITWriteTest {
     write(baseInsert().set("JsonArrayValue").toJsonArray(Collections.emptyList()).build());
     Struct row = readLastRow("JsonArrayValue");
     assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getColumnType("JsonArrayValue")).isEqualTo(array(json()));
     assertThat(row.getJsonList(0)).containsExactly();
   }
 
@@ -628,6 +644,7 @@ public class ITWriteTest {
     write(baseInsert().set("JsonArrayValue").toJsonArray(Arrays.asList("[]", null, "{}")).build());
     Struct row = readLastRow("JsonArrayValue");
     assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getColumnType("JsonArrayValue")).isEqualTo(array(json()));
     assertThat(row.getJsonList(0)).containsExactly("[]", null, "{}").inOrder();
   }
 
@@ -641,6 +658,7 @@ public class ITWriteTest {
             .build());
     Struct row = readLastRow("JsonArrayValue");
     assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getColumnType("JsonArrayValue")).isEqualTo(array(json()));
     assertThat(row.getJsonList(0))
         .containsExactly("[]", "{\"color\":\"red\",\"value\":\"#f00\"}", "{}")
         .inOrder();
@@ -655,7 +673,7 @@ public class ITWriteTest {
 
   @Test
   public void writeBytesArrayEmpty() {
-    write(baseInsert().set("BytesArrayValue").toBytesArray(Arrays.<ByteArray>asList()).build());
+    write(baseInsert().set("BytesArrayValue").toBytesArray(Collections.emptyList()).build());
     Struct row = readLastRow("BytesArrayValue");
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getBytesList(0)).containsExactly();
@@ -680,10 +698,7 @@ public class ITWriteTest {
   @Test
   public void writeTimestampArrayEmpty() {
     write(
-        baseInsert()
-            .set("TimestampArrayValue")
-            .toTimestampArray(Arrays.<Timestamp>asList())
-            .build());
+        baseInsert().set("TimestampArrayValue").toTimestampArray(Collections.emptyList()).build());
     Struct row = readLastRow("TimestampArrayValue");
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getTimestampList(0)).containsExactly();
@@ -712,7 +727,7 @@ public class ITWriteTest {
 
   @Test
   public void writeDateArrayEmpty() {
-    write(baseInsert().set("DateArrayValue").toDateArray(Arrays.<Date>asList()).build());
+    write(baseInsert().set("DateArrayValue").toDateArray(Collections.emptyList()).build());
     Struct row = readLastRow("DateArrayValue");
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getDateList(0)).containsExactly();
@@ -739,11 +754,7 @@ public class ITWriteTest {
   @Test
   public void writeNumericArrayEmpty() {
     assumeFalse("Emulator does not yet support NUMERIC", EmulatorSpannerHelper.isUsingEmulator());
-    write(
-        baseInsert()
-            .set("NumericArrayValue")
-            .toNumericArray(ImmutableList.<BigDecimal>of())
-            .build());
+    write(baseInsert().set("NumericArrayValue").toNumericArray(ImmutableList.of()).build());
     Struct row = readLastRow("NumericArrayValue");
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getBigDecimalList(0)).containsExactly();

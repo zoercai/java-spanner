@@ -19,6 +19,9 @@ package com.google.cloud.spanner.it;
 import static com.google.cloud.spanner.testing.EmulatorSpannerHelper.isUsingEmulator;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeFalse;
 
@@ -230,6 +233,19 @@ public class ITQueryTest {
   public void bindJson() {
     assumeFalse("Emulator does not yet support JSON", EmulatorSpannerHelper.isUsingEmulator());
     Struct row =
+        execute(
+            Statement.newBuilder("SELECT @v")
+                .bind("v")
+                .to(Value.json("{\"rating\":9,\"open\":true}")),
+            Type.json());
+    assertThat(row.isNull(0)).isFalse();
+    assertThat(row.getJson(0)).isEqualTo("{\"open\":true,\"rating\":9}");
+  }
+
+  @Test
+  public void bindJsonEmpty() {
+    assumeFalse("Emulator does not yet support JSON", EmulatorSpannerHelper.isUsingEmulator());
+    Struct row =
         execute(Statement.newBuilder("SELECT @v").bind("v").to(Value.json("{}")), Type.json());
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getJson(0)).isEqualTo("{}");
@@ -331,7 +347,7 @@ public class ITQueryTest {
   public void bindBoolArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toBoolArray(Arrays.<Boolean>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toBoolArray(Collections.emptyList()),
             Type.array(Type.bool()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getBooleanList(0)).containsExactly();
@@ -360,7 +376,7 @@ public class ITQueryTest {
   public void bindInt64ArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toInt64Array(Arrays.<Long>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toInt64Array(Collections.emptyList()),
             Type.array(Type.int64()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getLongList(0)).containsExactly();
@@ -401,7 +417,7 @@ public class ITQueryTest {
   public void bindFloat64ArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toFloat64Array(Arrays.<Double>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toFloat64Array(Collections.emptyList()),
             Type.array(Type.float64()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getDoubleList(0)).containsExactly();
@@ -430,7 +446,7 @@ public class ITQueryTest {
   public void bindStringArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toStringArray(Arrays.<String>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toStringArray(Collections.emptyList()),
             Type.array(Type.string()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getStringList(0)).containsExactly();
@@ -450,10 +466,14 @@ public class ITQueryTest {
     assumeFalse("Emulator does not yet support JSON", EmulatorSpannerHelper.isUsingEmulator());
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toJsonArray(asList("{}", "[]", null)),
+            Statement.newBuilder("SELECT @v")
+                .bind("v")
+                .toJsonArray(asList("{}", "[]", "{\"rating\":9,\"open\":true}", null)),
             Type.array(Type.json()));
     assertThat(row.isNull(0)).isFalse();
-    assertThat(row.getJsonList(0)).containsExactly("{}", "[]", null).inOrder();
+    assertThat(row.getJsonList(0))
+        .containsExactly("{}", "[]", "{\"open\":true,\"rating\":9}", null)
+        .inOrder();
   }
 
   @Test
@@ -464,7 +484,7 @@ public class ITQueryTest {
             Statement.newBuilder("SELECT @v").bind("v").toJsonArray(Collections.emptyList()),
             Type.array(Type.json()));
     assertThat(row.isNull(0)).isFalse();
-    assertThat(row.getJsonList(0)).containsExactly();
+    assertThat(row.getJsonList(0)).isEqualTo(Collections.emptyList());
   }
 
   @Test
@@ -493,7 +513,7 @@ public class ITQueryTest {
   public void bindBytesArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toBytesArray(Arrays.<ByteArray>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toBytesArray(Collections.emptyList()),
             Type.array(Type.bytes()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getBytesList(0)).isEmpty();
@@ -525,9 +545,7 @@ public class ITQueryTest {
   public void bindTimestampArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v")
-                .bind("v")
-                .toTimestampArray(Arrays.<Timestamp>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toTimestampArray(Collections.emptyList()),
             Type.array(Type.timestamp()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getTimestampList(0)).containsExactly();
@@ -559,7 +577,7 @@ public class ITQueryTest {
   public void bindDateArrayEmpty() {
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toDateArray(Arrays.<Date>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toDateArray(Collections.emptyList()),
             Type.array(Type.date()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getDateList(0)).containsExactly();
@@ -592,7 +610,7 @@ public class ITQueryTest {
     assumeFalse("Emulator does not yet support NUMERIC", EmulatorSpannerHelper.isUsingEmulator());
     Struct row =
         execute(
-            Statement.newBuilder("SELECT @v").bind("v").toNumericArray(Arrays.<BigDecimal>asList()),
+            Statement.newBuilder("SELECT @v").bind("v").toNumericArray(Collections.emptyList()),
             Type.array(Type.numeric()));
     assertThat(row.isNull(0)).isFalse();
     assertThat(row.getBigDecimalList(0)).containsExactly();
@@ -647,7 +665,10 @@ public class ITQueryTest {
     Struct p = structValue();
     try {
       execute(
-          Statement.newBuilder("SELECT @p").bind("p").toStructArray(p.getType(), asList(p)).build(),
+          Statement.newBuilder("SELECT @p")
+              .bind("p")
+              .toStructArray(p.getType(), Collections.singletonList(p))
+              .build(),
           p.getType());
       fail("Expected exception");
     } catch (SpannerException ex) {
@@ -806,8 +827,8 @@ public class ITQueryTest {
 
   @Test
   public void bindEmptyArrayOfStruct() {
-    Type elementType = Type.struct(asList(Type.StructField.of("f1", Type.date())));
-    List<Struct> p = asList();
+    Type elementType = Type.struct(Collections.singletonList(StructField.of("f1", Type.date())));
+    List<Struct> p = Collections.emptyList();
     assertThat(p).isEmpty();
 
     List<Struct> rows =
@@ -828,6 +849,63 @@ public class ITQueryTest {
     Struct row =
         execute(Statement.newBuilder("SELECT @p.f1 IS NULL").bind("p").to(p).build(), Type.bool());
     assertThat(row.getBoolean(0)).isTrue();
+  }
+
+  @Test
+  public void bindStructWithBoolArrayFieldThatContainsNulls() {
+    Struct p =
+        Struct.newBuilder()
+            .set("boolArray")
+            .to(Value.boolArray(Arrays.asList(true, false, null)))
+            .build();
+    List<Struct> rows =
+        resultRows(
+            Statement.newBuilder("SELECT * FROM UNNEST(@p.boolArray) ORDER BY 1")
+                .bind("p")
+                .to(p)
+                .build(),
+            Type.struct(StructField.of("", Type.bool())));
+    assertTrue(rows.get(0).isNull(0));
+    assertFalse(rows.get(1).getBoolean(0));
+    assertTrue(rows.get(2).getBoolean(0));
+  }
+
+  @Test
+  public void bindStructWithInt64ArrayFieldThatContainsNulls() {
+    Struct p =
+        Struct.newBuilder()
+            .set("int64Array")
+            .to(Value.int64Array(Arrays.asList(1L, 100L, null)))
+            .build();
+    List<Struct> rows =
+        resultRows(
+            Statement.newBuilder("SELECT * FROM UNNEST(@p.int64Array) ORDER BY 1")
+                .bind("p")
+                .to(p)
+                .build(),
+            Type.struct(StructField.of("", Type.int64())));
+    assertTrue(rows.get(0).isNull(0));
+    assertEquals(1L, rows.get(1).getLong(0));
+    assertEquals(100L, rows.get(2).getLong(0));
+  }
+
+  @Test
+  public void bindStructWithFloat64ArrayFieldThatContainsNulls() {
+    Struct p =
+        Struct.newBuilder()
+            .set("float64Array")
+            .to(Value.float64Array(Arrays.asList(1d, 3.14d, null)))
+            .build();
+    List<Struct> rows =
+        resultRows(
+            Statement.newBuilder("SELECT * FROM UNNEST(@p.float64Array) ORDER BY 1")
+                .bind("p")
+                .to(p)
+                .build(),
+            Type.struct(StructField.of("", Type.float64())));
+    assertTrue(rows.get(0).isNull(0));
+    assertEquals(1d, rows.get(1).getDouble(0), 0d);
+    assertEquals(3.14d, rows.get(2).getDouble(0), 0d);
   }
 
   @Test
@@ -990,6 +1068,36 @@ public class ITQueryTest {
     assertThat(receivedStats).isNotNull();
     assertThat(receivedStats.hasQueryPlan()).isTrue();
     assertThat(receivedStats.hasQueryStats()).isTrue();
+  }
+
+  @Test
+  public void testSelectArrayOfStructs() {
+    try (ResultSet resultSet =
+        client
+            .singleUse()
+            .executeQuery(
+                Statement.of(
+                    "WITH points AS\n"
+                        + "  (SELECT [1, 5] as point\n"
+                        + "   UNION ALL SELECT [2, 8] as point\n"
+                        + "   UNION ALL SELECT [3, 7] as point\n"
+                        + "   UNION ALL SELECT [4, 1] as point\n"
+                        + "   UNION ALL SELECT [5, 7] as point)\n"
+                        + "SELECT ARRAY(\n"
+                        + "  SELECT STRUCT(point)\n"
+                        + "  FROM points)\n"
+                        + "  AS coordinates"))) {
+      assertTrue(resultSet.next());
+      assertEquals(resultSet.getColumnCount(), 1);
+      assertThat(resultSet.getStructList(0))
+          .containsExactly(
+              Struct.newBuilder().set("point").to(Value.int64Array(new long[] {1L, 5L})).build(),
+              Struct.newBuilder().set("point").to(Value.int64Array(new long[] {2L, 8L})).build(),
+              Struct.newBuilder().set("point").to(Value.int64Array(new long[] {3L, 7L})).build(),
+              Struct.newBuilder().set("point").to(Value.int64Array(new long[] {4L, 1L})).build(),
+              Struct.newBuilder().set("point").to(Value.int64Array(new long[] {5L, 7L})).build());
+      assertFalse(resultSet.next());
+    }
   }
 
   private List<Struct> resultRows(Statement statement, Type expectedRowType) {
